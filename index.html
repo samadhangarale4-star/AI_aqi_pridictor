@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Air Quality Prediction System</title>
+    <meta name="description" content="A clean, modern 2-day air quality forecast and prediction system with time slot breakdowns and AI health recommendations." />
+    <meta property="og:title" content="Air Quality Prediction System" />
+    <meta property="og:description" content="A clean, modern 2-day air quality forecast and prediction system with time slot breakdowns and AI health recommendations." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // In AI Studio preview, HMR is disabled. Ignore WebSocket connection errors.
+      window.addEventListener('error', function (event) {
+        if (
+          event.message &&
+          (event.message.includes('WebSocket') ||
+            event.message.includes('createWebSocketModuleRunnerTransport') ||
+            event.message.includes('@vite/client'))
+        ) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function (event) {
+        var reason = '' + (event.reason && (event.reason.message || event.reason));
+        if (
+          reason.includes('WebSocket') ||
+          reason.includes('createWebSocketModuleRunnerTransport') ||
+          reason.includes('@vite/client')
+        ) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
