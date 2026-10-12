@@ -19,6 +19,23 @@ export interface DayForecast {
   timeSlots: TimeSlotForecast[]; // Exactly 5 time slots
 }
 
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface RegionalStation {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  aqi: number;
+  category: AQICategory;
+  mainPollutant: string;
+  distanceKm: number;
+  temperature: string;
+}
+
 export interface PredictionResult {
   area: string;
   predictedAt: string;
@@ -28,6 +45,8 @@ export interface PredictionResult {
   days: DayForecast[]; // Exactly 2 days
   recommendation: string;
   recommendationSource: 'ai' | 'standard';
+  coordinates: Coordinates;
+  regionalStations: RegionalStation[];
 }
 
 export type AQICategory =

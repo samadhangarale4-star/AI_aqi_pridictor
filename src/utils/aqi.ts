@@ -1,8 +1,10 @@
 import { 
   AQICategory, 
   AQICategoryConfig, 
+  Coordinates,
   DayForecast, 
   PredictionResult, 
+  RegionalStation, 
   SimulationParams, 
   TimeSlotForecast 
 } from '../types';
@@ -132,6 +134,46 @@ export const POPULAR_AREAS = [
   'Delhi Urban Corridor',
 ];
 
+export interface PopularAreaItem {
+  name: string;
+  tag: string;
+  emoji: string;
+  badgeColor: string;
+}
+
+export const POPULAR_AREA_ITEMS: PopularAreaItem[] = [
+  { name: 'Central Downtown', tag: 'Urban Core', emoji: '🏢', badgeColor: 'bg-sky-100 text-sky-800 border-sky-200' },
+  { name: 'Industrial Sector 9', tag: 'Industrial', emoji: '🏭', badgeColor: 'bg-amber-100 text-amber-800 border-amber-200' },
+  { name: 'Suburban Green Park', tag: 'Eco Reserve', emoji: '🌲', badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  { name: 'East Valley Residential', tag: 'Residential', emoji: '🏡', badgeColor: 'bg-teal-100 text-teal-800 border-teal-200' },
+  { name: 'Riverside Harbor', tag: 'Coastal Port', emoji: '⚓', badgeColor: 'bg-blue-100 text-blue-800 border-blue-200' },
+  { name: 'Delhi Urban Corridor', tag: 'Megacity', emoji: '🌆', badgeColor: 'bg-rose-100 text-rose-800 border-rose-200' },
+];
+
+export const AREA_COORDINATES: Record<string, Coordinates> = {
+  'central downtown': { lat: 37.7749, lng: -122.4194 },
+  'industrial sector 9': { lat: 37.8044, lng: -122.2712 },
+  'suburban green park': { lat: 37.8715, lng: -122.2730 },
+  'east valley residential': { lat: 37.3382, lng: -121.8863 },
+  'riverside harbor': { lat: 37.7955, lng: -122.3937 },
+  'delhi urban corridor': { lat: 28.6139, lng: 77.2090 },
+  'delhi': { lat: 28.6139, lng: 77.2090 },
+  'new york': { lat: 40.7128, lng: -74.0060 },
+  'london': { lat: 51.5074, lng: -0.1278 },
+  'tokyo': { lat: 35.6762, lng: 139.6503 },
+  'paris': { lat: 48.8566, lng: 2.3522 },
+  'los angeles': { lat: 34.0522, lng: -118.2437 },
+  'beijing': { lat: 39.9042, lng: 116.4074 },
+  'mumbai': { lat: 19.0760, lng: 72.8777 },
+  'chicago': { lat: 41.8781, lng: -87.6298 },
+  'sydney': { lat: -33.8688, lng: 151.2093 },
+  'berlin': { lat: 52.5200, lng: 13.4050 },
+  'san francisco': { lat: 37.7749, lng: -122.4194 },
+  'toronto': { lat: 43.6532, lng: -79.3832 },
+  'singapore': { lat: 1.3521, lng: 103.8198 },
+  'dubai': { lat: 25.2048, lng: 55.2708 },
+};
+
 function hashCode(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -140,6 +182,112 @@ function hashCode(str: string): number {
     hash |= 0;
   }
   return Math.abs(hash);
+}
+
+export function getAreaCoordinates(areaName: string): Coordinates {
+  const lower = areaName.toLowerCase().trim();
+  if (AREA_COORDINATES[lower]) {
+    return AREA_COORDINATES[lower];
+  }
+
+  // Check substring matches
+  for (const [key, coords] of Object.entries(AREA_COORDINATES)) {
+    if (lower.includes(key) || key.includes(lower)) {
+      return coords;
+    }
+  }
+
+  // Deterministic realistic regional lat/lng based on hash
+  const hash = hashCode(lower);
+  const latOffset = ((hash % 1000) - 500) / 10000; // approx +-0.05 deg
+  const lngOffset = (((hash >> 3) % 1000) - 500) / 10000;
+  
+  return {
+    lat: Number((37.7749 + latOffset).toFixed(4)),
+    lng: Number((-122.4194 + lngOffset).toFixed(4)),
+  };
+}
+
+export function getRegionalStations(
+  areaName: string,
+  center: Coordinates,
+  baseAqi: number
+): RegionalStation[] {
+  const hash = hashCode(areaName.toLowerCase().trim());
+
+  const stationTemplates = [
+    {
+      suffix: 'North Sensor Grid',
+      dLat: 0.032,
+      dLng: 0.015,
+      factor: 0.92,
+      pollutant: 'PM2.5',
+      tempDelta: -1,
+      dist: 3.8,
+    },
+    {
+      suffix: 'Industrial Logistics Node',
+      dLat: 0.012,
+      dLng: -0.038,
+      factor: 1.28,
+      pollutant: 'NO2',
+      tempDelta: 2,
+      dist: 4.1,
+    },
+    {
+      suffix: 'Ecological Forest Reserve',
+      dLat: -0.026,
+      dLng: 0.028,
+      factor: 0.68,
+      pollutant: 'O3',
+      tempDelta: -2,
+      dist: 3.5,
+    },
+    {
+      suffix: 'Harbor Waterfront Node',
+      dLat: 0.019,
+      dLng: 0.041,
+      factor: 0.84,
+      pollutant: 'PM10',
+      tempDelta: -1,
+      dist: 4.6,
+    },
+    {
+      suffix: 'Civic Metro Interchange',
+      dLat: -0.031,
+      dLng: -0.024,
+      factor: 1.15,
+      pollutant: 'PM2.5',
+      tempDelta: 1,
+      dist: 3.9,
+    },
+    {
+      suffix: 'Valley Residential Node',
+      dLat: -0.044,
+      dLng: 0.018,
+      factor: 0.96,
+      pollutant: 'PM10',
+      tempDelta: 0,
+      dist: 5.1,
+    },
+  ];
+
+  return stationTemplates.map((template, idx) => {
+    const stationAqi = Math.max(12, Math.min(480, Math.round(baseAqi * template.factor + (((hash + idx * 13) % 11) - 5))));
+    const cleanName = `${areaName} - ${template.suffix}`;
+    
+    return {
+      id: `station-${idx}-${hash}`,
+      name: cleanName,
+      lat: Number((center.lat + template.dLat).toFixed(4)),
+      lng: Number((center.lng + template.dLng).toFixed(4)),
+      aqi: stationAqi,
+      category: getCategoryFromAQI(stationAqi),
+      mainPollutant: template.pollutant,
+      distanceKm: template.dist,
+      temperature: `${20 + template.tempDelta}°C`,
+    };
+  });
 }
 
 // Exactly 5 time slots per day
@@ -275,6 +423,9 @@ export function generateForecast(
   const peakAqi = Math.max(...allAqiValues);
   const category = getCategoryFromAQI(overallAqi);
 
+  const coordinates = getAreaCoordinates(cleanName);
+  const regionalStations = getRegionalStations(cleanName, coordinates, overallAqi);
+
   return {
     area: cleanName,
     predictedAt: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
@@ -282,5 +433,7 @@ export function generateForecast(
     peakAqi,
     category,
     days,
+    coordinates,
+    regionalStations,
   };
 }
