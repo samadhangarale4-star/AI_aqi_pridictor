@@ -54,9 +54,32 @@ function getRuleBasedRecommendation(category: string, aqi: number): string {
 // AI Health recommendation endpoint
 app.post('/api/recommendation', async (req, res) => {
   try {
-    const { area, peakAqi, avgAqi, category, timeSlotsSummary } = req.body;
-    const cleanCategory = category || (avgAqi <= 50 ? 'Good' : avgAqi <= 100 ? 'Moderate' : avgAqi <= 150 ? 'Unhealthy for Sensitive Groups' : avgAqi <= 200 ? 'Unhealthy' : 'Very Unhealthy');
-    const numericAvg = Number(avgAqi) || 75;
+    const { area, peakAqi, avgAqi, category, timeSlotsSummary } = req.body ?? {};
+    const validCategories = [
+      'Good',
+      'Moderate',
+      'Unhealthy for Sensitive Groups',
+      'Unhealthy',
+      'Very Unhealthy',
+      'Hazardous',
+    ];
+    const hasValidAqi = (value: unknown) =>
+      typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 500;
+
+    if (
+      !hasValidAqi(avgAqi) ||
+      (peakAqi !== undefined && !hasValidAqi(peakAqi)) ||
+      (area !== undefined && (typeof area !== 'string' || area.length > 100)) ||
+      (category !== undefined && (typeof category !== 'string' || !validCategories.includes(category))) ||
+      (timeSlotsSummary !== undefined && (typeof timeSlotsSummary !== 'string' || timeSlotsSummary.length > 2000))
+    ) {
+      return res.status(400).json({
+        error: 'Provide an average AQI between 0 and 500 and valid optional recommendation details.',
+      });
+    }
+
+    const numericAvg = avgAqi;
+    const cleanCategory = category || (numericAvg <= 50 ? 'Good' : numericAvg <= 100 ? 'Moderate' : numericAvg <= 150 ? 'Unhealthy for Sensitive Groups' : numericAvg <= 200 ? 'Unhealthy' : numericAvg <= 300 ? 'Very Unhealthy' : 'Hazardous');
 
     if (ai) {
       const prompt = `You are a medical & environmental health advisor for an Air Quality Prediction System.
@@ -71,6 +94,7 @@ Requirements:
 - Exactly 2 to 3 concise, highly practical sentences (under 60 words total).
 - Mention safe outdoor activity timing, mask guidance (if AQI > 100), and ventilation or sensitive group advice.
 - Tone: calm, professional, clear for students and everyday residents.
+- Do not diagnose, prescribe medication, claim certainty, or give individualized medical advice.
 - Do NOT use bullet symbols, markdown headers, or greetings. Output only the short recommendation text.`;
 
       const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
@@ -106,6 +130,27 @@ Requirements:
       source: 'standard',
     });
   }
+});
+
+app.use('/api', (_req, res) => {
+  res.status(404).json({ error: 'API route not found.' });
+});
+
+app.use('/api', (error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const status =
+    typeof error === 'object' && error !== null && 'status' in error && typeof error.status === 'number'
+      ? error.status
+      : undefined;
+
+  if (status === 400) {
+    return res.status(400).json({ error: 'Request body must contain valid JSON.' });
+  }
+
+  if (status === 413) {
+    return res.status(413).json({ error: 'Request body is too large.' });
+  }
+
+  next(error);
 });
 
 async function startServer() {
